@@ -57,14 +57,24 @@ class Player():
     return "{} has {} cards".format(self.name,len(self.all_cards))
 
 
-def hand_value(player,hand):
+# function for calculating hand value
+# special handling of "Ace" which can be 1 or 11
+def hand_value(hand):
   hand_value = 0
   cards = []
+  ace_in_hand = False
+
   for card in hand:
     hand_value = hand_value + card.value
     cards.append(str(card))
-  print("\t{}'s hand value: {} ({})".format(player, hand_value, cards))
-  return hand_value
+
+    if card.rank == 'Ace':
+      ace_in_hand = True # there is an ace somewhere in the hand
+
+  if hand_value > 21 and ace_in_hand:
+    hand_value = hand_value - 10 # reducing value of Ace from 11 to 1
+
+  return hand_value, cards
 
 
 # game setup, initialize some variables
@@ -115,13 +125,15 @@ while game_on == True:
 
     print("\nDEALING CARDS...")
     hand_player.extend([deck.deal_one(), deck.deal_one()])
-    hand_dealer.extend([deck.deal_one(), deck.deal_one()])
+    hand_dealer.append(deck.deal_one())
 
     #reveal players hand, and only 1 of dealer's cards
-    hand_value(player_one.name, hand_player)
-    print("\t{}'s card: {} ({})".format("dealer", hand_dealer[0].value, str(hand_dealer[0])))
+    hand_player_value, hand_player_list = hand_value(hand_player)
+    print("\t{}'s hand value: {} ({})".format(player_one.name, hand_player_value, hand_player_list))
+    hand_dealer_value, hand_dealer_list = hand_value(hand_dealer)
+    print("\t{}'s card: {} ({})".format("dealer", hand_dealer_value, hand_dealer_list))
 
-    time.sleep(5)
+    time.sleep(2)
     # main round while loop
     # exit criteria include player blackjack, player bust,
     # dealer blackjack, dealer bust, or highest value
@@ -131,23 +143,21 @@ while game_on == True:
       # player hit / stay loop
       print("\nPLAYERS'S TURN...")
       while dealer_turn == False:
-        #check hand
-        hand_value_player = hand_value(player_one.name,hand_player)
 
         # check for BLACKJACK or BUST, if none, move to hit/stay
-        if hand_value_player == 21:
+        if hand_player_value == 21:
           print("\tBLACKJACK!!! {} is the Winner!".format(player_one.name))
           player_one.chips += bet
           round_on = False
           break
-        if hand_value_player > 21:
+        if hand_player_value > 21:
           print("\tBUST! The Dealer is the Winner!")
           player_one.chips -= bet
           round_on = False
           break
         else:
           #ask the player if they wish to HIT or STAY
-          hit_response = input("\treview the cards... type 'h' to HIT, or 's' to STAY\n")
+          hit_response = input("\tReview the cards... type 'h' to HIT, or 's' to STAY\t")
           if hit_response == "h":
             # player chose to hit
             print("\tHit")
@@ -155,40 +165,51 @@ while game_on == True:
           elif hit_response == "s":
             # player chose to stay
             print("\tStay")
+            
+            # initialize dealer's turn
             dealer_turn = True
             print("\nDEALERS'S TURN...")
+            hand_dealer.append(deck.deal_one())
+            hand_dealer_value, hand_dealer_list = hand_value(hand_dealer)
+            print("\t{}'s card: {} ({})".format("dealer", hand_dealer_value, hand_dealer_list))
+            break
+
           else:
             print("\tplease enter lowercase h or lowercase s")
+
+        #check hand
+        hand_player_value, hand_player_list = hand_value(hand_player)
+        print("\t{}'s hand value: {} ({})".format(player_one.name, hand_player_value, hand_player_list))
 
       # dealer hit / stay loop
       while dealer_turn == True:
 
-        # check dealer hand
-        hand_value_dealer = hand_value("dealer",hand_dealer)
+        time.sleep(2)
 
         # check for BLACKJACK or BUST, if none, move to hit/stay
-        if hand_value_dealer == 21:
+        if hand_dealer_value == 21:
           print("\tDealer is the Winner!")
           player_one.chips -= bet
           round_on = False
           break
-        elif hand_value_dealer > 21:
+        elif hand_dealer_value > 21:
           print("\tBUST! The {} is the Winner!".format(player_one.name))
           player_one.chips += bet
           round_on = False
           break
-        elif hand_value_player == hand_value_dealer:
+        elif hand_player_value == hand_dealer_value:
           print("\tTie goes to the player?")
           player_one.chips += bet
           round_on = False
           break
         else:
           #dealer hits when <= 17
-          if hand_value_dealer <= 17:
+          if hand_dealer_value <= 17:
             hand_dealer.append(deck.deal_one())
+            print("\tHit")
           else:
             # winner handling
-            if hand_value_player > hand_value_dealer:
+            if hand_player_value > hand_dealer_value:
               print("\t{} is the Winner!".format(player_one.name))
               player_one.chips += bet
               round_on = False
@@ -198,6 +219,10 @@ while game_on == True:
               player_one.chips -= bet
               round_on = False
               break
+
+          hand_dealer_value, hand_dealer_list = hand_value(hand_dealer)
+          print("\t{}'s card: {} ({})".format("dealer", hand_dealer_value, hand_dealer_list))
+        
 
     # index round number
     round_num += 1
@@ -210,6 +235,6 @@ while game_on == True:
     # print round results
     print("\n{} now has {} chips".format(player_one.name, player_one.chips))
 
-    time.sleep(5)
+    time.sleep(2)
 
 print("game over")
